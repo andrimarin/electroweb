@@ -107,12 +107,22 @@ func handleLog(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	loadReceta()
-	http.HandleFunc("/api/receta", handleGetReceta)    // Para el ESP32
-	http.HandleFunc("/api/heartbeat", handleHeartbeat) // Bidireccional
-	http.HandleFunc("/api/log", handleLog)             // Resultados
-	// Endpoints para tu interfaz de Especialista (App Flutter o Web)
-	http.HandleFunc("/admin/set-receta", handleSetReceta)
-	http.HandleFunc("/admin/command", handleSetCommand)
+
+	// Crear un nuevo multiplexor de rutas (ServeMux)
+	mux := http.NewServeMux()
+
+	// Registrar los endpoints de la API en el mux
+	mux.HandleFunc("/api/receta", handleGetReceta)
+	mux.HandleFunc("/api/heartbeat", handleHeartbeat)
+	mux.HandleFunc("/api/log", handleLog)
+	mux.HandleFunc("/admin/set-receta", handleSetReceta)
+	mux.HandleFunc("/admin/command", handleSetCommand)
+
+	// Servir archivos estáticos para cualquier otra ruta
+	fs := http.FileServer(http.Dir("."))
+	mux.Handle("/", fs)
+
 	fmt.Println("🚀 Servidor TENS iniciado en http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	// Usar el mux personalizado en lugar del DefaultServeMux
+	log.Fatal(http.ListenAndServe(":8080", mux))
 }
