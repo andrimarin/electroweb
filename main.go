@@ -98,7 +98,7 @@ func handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleLog(w http.ResponseWriter, r *http.Request) {
-	// Recibe el resultado de la operación [cite: 151]
+	// Recibe el resultado de la operación 
 	var logData map[string]interface{}
 	json.NewDecoder(r.Body).Decode(&logData)
 	fmt.Printf("LOG RECIBIDO: %v\n", logData)
