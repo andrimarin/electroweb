@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-// Estructura de la Receta basada en tus requerimientos 
+// Estructura de la Receta basada en tus requerimientos
 type Ciclo struct {
 	TrabajoSeg int `json:"trabajo_seg"`
 	PausaSeg   int `json:"pausa_seg"`
@@ -28,7 +28,7 @@ type Receta struct {
 var (
 	currentReceta  Receta
 	currentCommand string     = "NONE" // NONE, START, STOP,
-	mu             sync.Mutex // Para evitar colisiones en cambios en línea
+	mu             sync.Mutex          // Para evitar colisiones en cambios en línea
 )
 
 const fileName = "receta.json"
@@ -63,7 +63,7 @@ func handleSetReceta(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSetCommand(w http.ResponseWriter, r *http.Request) {
-	// Permite al especialista enviar START o STOP 
+	// Permite al especialista enviar START o STOP
 	cmd := r.URL.Query().Get("cmd")
 	mu.Lock()
 	currentCommand = cmd
@@ -98,7 +98,7 @@ func handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleLog(w http.ResponseWriter, r *http.Request) {
-	// Recibe el resultado de la operación 
+	// Recibe el resultado de la operación
 	var logData map[string]interface{}
 	json.NewDecoder(r.Body).Decode(&logData)
 	fmt.Printf("LOG RECIBIDO: %v\n", logData)
@@ -107,15 +107,12 @@ func handleLog(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	loadReceta()
-
 	http.HandleFunc("/api/receta", handleGetReceta)    // Para el ESP32
 	http.HandleFunc("/api/heartbeat", handleHeartbeat) // Bidireccional
 	http.HandleFunc("/api/log", handleLog)             // Resultados
-
 	// Endpoints para tu interfaz de Especialista (App Flutter o Web)
 	http.HandleFunc("/admin/set-receta", handleSetReceta)
 	http.HandleFunc("/admin/command", handleSetCommand)
-
 	fmt.Println("🚀 Servidor TENS iniciado en http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
