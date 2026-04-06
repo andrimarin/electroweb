@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel del Especialista - TENS Cloud</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; margin-bottom: 20px; }
+        h2 { color: #1a73e8; margin-top: 0; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="number"], input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .slider { width: 100%; }
+        .btn-group { display: flex; gap: 10px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-start { background: #34a853; color: white; }
+        .btn-stop { background: #ea4335; color: white; }
+        .btn-update { background: #1a73e8; color: white; }
+        .status { padding: 10px; border-radius: 6px; background: #e8f0fe; font-family: monospace; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Control de Terapia</h2>
+        <div class="btn-group">
+            <button class="btn-start" onclick="sendCommand('START')">INICIAR</button>
+            <button class="btn-stop" onclick="sendCommand('STOP')">DETENER (EMERGENCIA)</button>
+        </div>
+        <p>Comando actual en servidor: <b id="cmdStatus">NONE</b></p>
+    </div>
+
+    <div class="card">
+        <h2>Configuración de Receta</h2>
+        <div class="control-group">
+            <label>ID de Receta</label>
+            <input type="text" id="recetaId" value="terapia_vzla_01">
+        </div>
+        <div class="control-group">
+            <label>Intensidad (0-255)</label>
+            <input type="range" id="intensidad" min="0" max="255" class="slider" oninput="updateIntensityVal(this.value)">
+            <span id="intVal">0</span> mA (Amplitud PWM)
+        </div>
+        <div class="control-group">
+            <label>Frecuencia (Hz)</label>
+            <input type="number" id="freq" value="50">
+        </div>
+        <div class="control-group">
+            <label>Ancho de Pulso (ms)</label>
+            <input type="number" id="pulse" step="0.1" value="0.5">
+        </div>
+        <button class="btn-update" onclick="updateRecipe()">ACTUALIZAR RECETA</button>
+    </div>
+
+    <div class="card">
+        <h2>Estado del Servidor</h2>
+        <div class="status" id="serverJson">Cargando datos...</div>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost:8080";
+
+        function updateIntensityVal(val) {
+            document.getElementById('intVal').innerText = val;
+        }
+
+        async function sendCommand(cmd) {
+            try {
+                const res = await fetch(`${API_BASE}/admin/command?cmd=${cmd}`);
+                const text = await res.text();
+                document.getElementById('cmdStatus').innerText = cmd;
+                alert(text);
+            } catch (e) { alert("Error al enviar comando"); }
+        }
+
+        async function updateRecipe() {
+            const recipe = {
+                receta_id: document.getElementById('recetaId').value,
+                num_ciclos: 1, // Por ahora fijo para la prueba
+                ciclos: [{trabajo_seg: 300, pausa_seg: 60}],
+                frecuencia_hz: parseInt(document.getElementById('freq').value),
+                ancho_pulso_ms: parseFloat(document.getElementById('pulse').value),
+                intensidad_ma: parseInt(document.getElementById('intensidad').value)
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/set-receta`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(recipe)
+                });
+                const text = await res.text();
+                alert(text);
+                refreshStatus();
+            } catch (e) { alert("Error al actualizar receta"); }
+        }
+
+        async function refreshStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/api/receta`);
+                const data = await res.json();
+                document.getElementById('serverJson').innerText = JSON.stringify(data, null, 2);
+                // Sincronizar UI
+                document.getElementById('recetaId').value = data.receta_id;
+                document.getElementById('intensidad').value = data.intensidad_ma;
+                document.getElementById('intVal').innerText = data.intensidad_ma;
+                document.getElementById('freq').value = data.frecuencia_hz;
+                document.getElementById('pulse').value = data.ancho_pulso_ms;
+            } catch (e) { console.error("Error de sincronización"); }
+        }
+
+        // Cargar datos al iniciar
+        refreshStatus();
+    </script>
+</body>
+</html>

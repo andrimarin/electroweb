@@ -1,0 +1,11 @@
+{
+  "receta_id": "terapia_01",
+  "num_ciclos": 1,
+  "ciclos": [
+    {"trabajo_seg": 30, "pausa_seg": 20},
+    {"trabajo_seg": 30, "pausa_seg": 30}
+  ],
+  "frecuencia_hz": 50,
+  "ancho_pulso_ms": 0.5,
+  "intensidad_ma": 20
+}

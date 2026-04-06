@@ -1,0 +1,7 @@
+.env
+.comms
+.vscode-test
+.vscode-test-expressions
+.vscode-test-web
+.vscode-test-web-expressions
+.vscode-test-web-extensions

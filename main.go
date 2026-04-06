@@ -1,0 +1,121 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"sync"
+)
+
+// Estructura de la Receta basada en tus requerimientos [cite: 177, 289]
+type Ciclo struct {
+	TrabajoSeg int `json:"trabajo_seg"`
+	PausaSeg   int `json:"pausa_seg"`
+}
+
+type Receta struct {
+	ID           string  `json:"receta_id"`
+	NumCiclos    int     `json:"num_ciclos"`
+	Ciclos       []Ciclo `json:"ciclos"`
+	FrecuenciaHz int     `json:"frecuencia_hz"`
+	AnchoPulsoMs float64 `json:"ancho_pulso_ms"`
+	Intensidad   int     `json:"intensidad_ma"` // 0-255 [cite: 173, 286]
+}
+
+// Estado en línea (Memoria)
+var (
+	currentReceta  Receta
+	currentCommand string     = "NONE" // NONE, START, STOP, PAUSE [cite: 213, 214]
+	mu             sync.Mutex          // Para evitar colisiones en cambios en línea
+)
+
+const fileName = "receta.json"
+
+// Cargar receta desde el archivo al iniciar
+func loadReceta() {
+	file, err := os.ReadFile(fileName)
+	if err != nil {
+		// Si no existe, creamos una por defecto
+		currentReceta = Receta{ID: "terapia_01", NumCiclos: 1, FrecuenciaHz: 50, AnchoPulsoMs: 0.5, Intensidad: 0}
+		saveReceta()
+		return
+	}
+	json.Unmarshal(file, &currentReceta)
+}
+
+func saveReceta() {
+	data, _ := json.MarshalIndent(currentReceta, "", "  ")
+	os.WriteFile(fileName, data, 0644)
+}
+
+func handleSetReceta(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		return
+	}
+	mu.Lock()
+	defer mu.Unlock()
+
+	json.NewDecoder(r.Body).Decode(&currentReceta)
+	saveReceta()
+	fmt.Fprintf(w, "Receta actualizada y guardada")
+}
+
+func handleSetCommand(w http.ResponseWriter, r *http.Request) {
+	// Permite al especialista enviar START o STOP [cite: 172, 213]
+	cmd := r.URL.Query().Get("cmd")
+	mu.Lock()
+	currentCommand = cmd
+	mu.Unlock()
+	fmt.Fprintf(w, "Comando %s enviado al dispositivo", cmd)
+}
+
+func handleGetReceta(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(currentReceta)
+}
+
+func handleHeartbeat(w http.ResponseWriter, r *http.Request) {
+	// El dispositivo envía su estatus y recibe comandos [cite: 182, 315]
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Responder con el comando pendiente y la intensidad actual
+	response := map[string]interface{}{
+		"command":   currentCommand,
+		"intensity": currentReceta.Intensidad,
+	}
+
+	// Una vez enviado el comando, lo reseteamos a NONE para no repetirlo
+	if currentCommand != "NONE" {
+		log.Printf("Dispositivo recibió comando: %s", currentCommand)
+		currentCommand = "NONE"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleLog(w http.ResponseWriter, r *http.Request) {
+	// Recibe el resultado de la operación [cite: 151]
+	var logData map[string]interface{}
+	json.NewDecoder(r.Body).Decode(&logData)
+	fmt.Printf("LOG RECIBIDO: %v\n", logData)
+	w.WriteHeader(http.StatusOK)
+}
+
+func main() {
+	loadReceta()
+
+	http.HandleFunc("/api/receta", handleGetReceta)    // Para el ESP32 [cite: 177]
+	http.HandleFunc("/api/heartbeat", handleHeartbeat) // Bidireccional
+	http.HandleFunc("/api/log", handleLog)             // Resultados [cite: 151]
+
+	// Endpoints para tu interfaz de Especialista (App Flutter o Web)
+	http.HandleFunc("/admin/set-receta", handleSetReceta)
+	http.HandleFunc("/admin/command", handleSetCommand)
+
+	fmt.Println("🚀 Servidor TENS iniciado en http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
