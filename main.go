@@ -27,7 +27,7 @@ type Receta struct {
 // Estado en línea (Memoria)
 var (
 	currentReceta  Receta
-	currentCommand string     = "NONE" // NONE, START, STOP, PAUSE [cite: 213, 214]
+	currentCommand string     = "NONE" // NONE, START, STOP, 
 	mu             sync.Mutex          // Para evitar colisiones en cambios en línea
 )
 
