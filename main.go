@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-// Estructura de la Receta basada en tus requerimientos [cite: 177, 289]
+// Estructura de la Receta basada en tus requerimientos 
 type Ciclo struct {
 	TrabajoSeg int `json:"trabajo_seg"`
 	PausaSeg   int `json:"pausa_seg"`
@@ -21,14 +21,14 @@ type Receta struct {
 	Ciclos       []Ciclo `json:"ciclos"`
 	FrecuenciaHz int     `json:"frecuencia_hz"`
 	AnchoPulsoMs float64 `json:"ancho_pulso_ms"`
-	Intensidad   int     `json:"intensidad_ma"` // 0-255 [cite: 173, 286]
+	Intensidad   int     `json:"intensidad_ma"` // 0-255
 }
 
 // Estado en línea (Memoria)
 var (
 	currentReceta  Receta
-	currentCommand string     = "NONE" // NONE, START, STOP, 
-	mu             sync.Mutex          // Para evitar colisiones en cambios en línea
+	currentCommand string     = "NONE" // NONE, START, STOP,
+	mu             sync.Mutex // Para evitar colisiones en cambios en línea
 )
 
 const fileName = "receta.json"
@@ -63,7 +63,7 @@ func handleSetReceta(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSetCommand(w http.ResponseWriter, r *http.Request) {
-	// Permite al especialista enviar START o STOP [cite: 172, 213]
+	// Permite al especialista enviar START o STOP 
 	cmd := r.URL.Query().Get("cmd")
 	mu.Lock()
 	currentCommand = cmd
@@ -77,7 +77,7 @@ func handleGetReceta(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleHeartbeat(w http.ResponseWriter, r *http.Request) {
-	// El dispositivo envía su estatus y recibe comandos [cite: 182, 315]
+	// El dispositivo envía su estatus y recibe comandos
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -108,9 +108,9 @@ func handleLog(w http.ResponseWriter, r *http.Request) {
 func main() {
 	loadReceta()
 
-	http.HandleFunc("/api/receta", handleGetReceta)    // Para el ESP32 [cite: 177]
+	http.HandleFunc("/api/receta", handleGetReceta)    // Para el ESP32
 	http.HandleFunc("/api/heartbeat", handleHeartbeat) // Bidireccional
-	http.HandleFunc("/api/log", handleLog)             // Resultados [cite: 151]
+	http.HandleFunc("/api/log", handleLog)             // Resultados
 
 	// Endpoints para tu interfaz de Especialista (App Flutter o Web)
 	http.HandleFunc("/admin/set-receta", handleSetReceta)
