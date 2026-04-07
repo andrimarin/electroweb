@@ -77,17 +77,16 @@ func handleGetReceta(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleHeartbeat(w http.ResponseWriter, r *http.Request) {
-	// El dispositivo envía su estatus y recibe comandos
 	mu.Lock()
 	defer mu.Unlock()
 
-	// Responder con el comando pendiente y la intensidad actual
+	// Respondemos con el comando, la intensidad Y el ancho de pulso actual
 	response := map[string]interface{}{
-		"command":   currentCommand,
-		"intensity": currentReceta.Intensidad,
+		"command":        currentCommand,
+		"intensity":      currentReceta.Intensidad,
+		"pulse_width_ms": currentReceta.AnchoPulsoMs, // Agregamos este campo
 	}
 
-	// Una vez enviado el comando, lo reseteamos a NONE para no repetirlo
 	if currentCommand != "NONE" {
 		log.Printf("Dispositivo recibió comando: %s", currentCommand)
 		currentCommand = "NONE"
@@ -96,6 +95,8 @@ func handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
+
+
 
 func handleLog(w http.ResponseWriter, r *http.Request) {
 	// Recibe el resultado de la operación
